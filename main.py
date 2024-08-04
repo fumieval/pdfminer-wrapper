@@ -1,8 +1,9 @@
-from pdfminer.high_level import extract_text_to_fp
+import pdfplumber
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from io import StringIO, BytesIO
+from io import BytesIO
 import os
 import json
+import utils
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -13,27 +14,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
             content_length = int(contentLength)
 
-            # Input type is always application/pdf
-            # determine the output format from the Accept header
-            # if Accept header is not present, default to text/plain
-            format = 'text'
-            if 'Accept' in self.headers:
-                if 'text/plain' in self.headers['Accept']:
-                    format = 'text'
-                elif 'text/html' in self.headers['Accept']:
-                    format = 'html'
-
             post_data = self.rfile.read(content_length)
 
-            inf = BytesIO(post_data)
-
-            outfp = BytesIO()
-            extract_text_to_fp(inf, output_type=format, outfp=outfp)
-
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(outfp.getvalue())
+            with pdfplumber.open(BytesIO(post_data)) as pdf:
+                resp = utils.to_markdown(pdf)
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                for chunk in resp:
+                    self.wfile.write((chunk + "\n").encode())
         except Exception as e:
             self.send_response(400)
             self.send_header('Content-type', 'text/plain')
