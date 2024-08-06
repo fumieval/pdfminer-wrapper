@@ -73,7 +73,7 @@ class Collider:
     y1 = math.floor((bbox[3] - self.bbox[1]) * self.scaleY)
     return BoundingBox(x0, y0, x1, y1)
 
-  def __init__(self, bbox, depth=4):
+  def __init__(self, bbox, depth=3):
     self.bbox = bbox
     self.depth = depth
     size = 2 ** depth
