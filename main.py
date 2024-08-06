@@ -8,6 +8,13 @@ import utils
 def readiness():
     return 'OK'
 
+@bottle.route('/parse', method='OPTIONS')
+def parse_options():
+    bottle.response.headers['Access-Control-Allow-Origin'] = '*'
+    bottle.response.headers['Access-Control-Allow-Methods'] = 'POST'
+    bottle.response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return
+
 @bottle.route('/parse', method='POST')
 def parse():
     try:
