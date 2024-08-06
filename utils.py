@@ -19,7 +19,7 @@ def to_markdown(pdf: pdfplumber.pdf):
         had_underline = False
         for char, obj in textmap.tuples:
           if char == "\n":
-            yield page_text
+            yield page_text + "\n"
             page_text = ""
             continue
           has_underline = False
@@ -37,6 +37,6 @@ def to_markdown(pdf: pdfplumber.pdf):
         if had_underline:
           page_text += "</u>"
 
-        yield page_text
+        yield page_text + "\n"
 
     pdf.close()
