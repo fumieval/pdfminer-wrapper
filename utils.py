@@ -4,60 +4,67 @@ import pdfplumber
 import quadtree
 from pdfplumber.utils import *
 
+class FormatBuffer:
+  def __init__(self):
+    self.has_underline = False
+    self.has_strikethrough = False
+    self.text = ""
+  def push(self, chunk, has_underline, has_strikethrough):
+    if self.has_underline != has_underline:
+      self.text += "</u>" if self.has_underline else "<u>"
+    if self.has_strikethrough != has_strikethrough:
+      self.text += "~~"
+    self.text += chunk
+    self.has_underline = has_underline
+    self.has_strikethrough = has_strikethrough
+  def flush(self):
+    if self.has_underline:
+      self.text += "</u>"
+    if self.has_strikethrough:
+      self.text += "~~"
+    result = self.text
+    self.text = ""
+    self.has_underline = False
+    self.has_strikethrough = False
+    return result
+
+def detect_underline_and_strikethrough(collider, obj):
+  has_underline = False
+  has_strikethrough = False
+  if obj is not None:
+    bb = obj_to_bbox(obj)
+    for target in collider.find(bb):
+      ratio = (target[1] - bb[1]) / (bb[3] - bb[1])
+      if ratio > 0.8:
+        has_underline = True
+        break
+      else:
+        has_strikethrough = True
+        break
+  return has_underline, has_strikethrough
+
+def page_to_markdown(page):
+  chars = page.chars
+
+  textmap = chars_to_textmap(chars, layout=True)
+
+  # Gather all lines in the page
+  collider = quadtree.Collider(page.bbox)
+  for obj in page.lines:
+    collider.add(obj_to_bbox(obj))
+
+  buffer = FormatBuffer()
+
+  for char, obj in textmap.tuples:
+    if char == "\n":
+      yield buffer.flush() + "\n"
+      continue
+    has_u, has_s = detect_underline_and_strikethrough(collider, obj)
+    buffer.push(char, has_u, has_s)
+
+  yield buffer.flush()
+
 def to_markdown(pdf: pdfplumber.pdf):
-    for page in pdf.pages:
-        filtered_page = page
-        chars = filtered_page.chars
-
-        textmap = chars_to_textmap(chars, layout=True)
-
-        collider = quadtree.Collider(page.bbox)
-        for obj in page.lines:
-          collider.add(obj_to_bbox(obj))
-
-        # detect underlines
-        page_text = ""
-        had_underline = False
-        had_strikethrough = False
-
-        for char, obj in textmap.tuples:
-          if char == "\n":
-            if had_underline:
-              page_text += "</u>"
-            if had_strikethrough:
-              page_text += "~~"
-            yield page_text + "\n"
-            page_text = ""
-            had_underline = False
-            had_strikethrough = False
-            continue
-
-          has_underline = False
-          has_strikethrough = False
-          if obj is not None:
-            bb = obj_to_bbox(obj)
-            for target in collider.find(bb):
-              relativePosition = (target[1] - bb[1]) / (bb[3] - bb[1])
-              if relativePosition > 0.8:
-                has_underline = True
-              else:
-                has_strikethrough = True
-          if has_underline and not had_underline:
-            page_text += "<u>"
-          if had_underline and not has_underline:
-            page_text += "</u>"
-          if has_strikethrough != had_strikethrough:
-            page_text += "~~"
-          had_underline = has_underline
-          had_strikethrough = has_strikethrough
-
-          page_text += char
-
-        if had_underline:
-          page_text += "</u>"
-        if had_strikethrough:
-          page_text += "~~"
-
-        yield page_text + "\n"
-
-    pdf.close()
+  for page in pdf.pages:
+    for line in page_to_markdown(page):
+      yield line
