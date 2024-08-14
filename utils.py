@@ -10,9 +10,13 @@ class FormatBuffer:
     self.has_strikethrough = False
     self.text = ""
   def push(self, chunk, has_underline, has_strikethrough):
-    if self.has_underline != has_underline:
-      self.text += "</u>" if self.has_underline else "<u>"
-    if self.has_strikethrough != has_strikethrough:
+    if not self.has_strikethrough and has_strikethrough:
+      self.text += "~~"
+    if not self.has_underline and has_underline:
+      self.text += "<u>"
+    if self.has_underline and not has_underline:
+      self.text += "</u>"
+    if self.has_strikethrough and not has_strikethrough:
       self.text += "~~"
     self.text += chunk
     self.has_underline = has_underline
@@ -37,10 +41,8 @@ def detect_underline_and_strikethrough(collider, obj):
       ratio = (target[1] - bb[1]) / (bb[3] - bb[1])
       if ratio > 0.8:
         has_underline = True
-        break
       else:
         has_strikethrough = True
-        break
   return has_underline, has_strikethrough
 
 def page_to_markdown(page):
