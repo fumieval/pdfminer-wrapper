@@ -1,4 +1,5 @@
 import math
+import itertools
 
 def interleave_32(n):
   n = (n | (n << 8)) & 0x00ff00ff
@@ -56,6 +57,11 @@ class MortonIndex:
         for i in range(4):
           stack.append(MortonIndex(index.value << 2 | i, index.level + 1))
 
+  def parents(self):
+    index = self
+    while index.level > 0:
+      index = MortonIndex(index.value >> 2, index.level - 1)
+      yield index
 class BoundingBox:
   def __init__(self, x0, y0, x1, y1):
     self.x0 = x0
@@ -90,10 +96,14 @@ class Collider:
     else:
       self.objects[idx].append(bbox)
 
-  def find(self, bbox):
+  def find(self, bbox, trace=None):
     index = MortonIndex.from_bbox(self.depth, self.transform(bbox))
-    for parent in index.children(self.depth):
-      idx = parent.to_index()
+
+    for item in itertools.chain(index.children(self.depth), index.parents()):
+      idx = item.to_index()
+      if trace is not None:
+        children = list(index.children(self.depth))
+        print(f"trace: {trace} {children} {self.objects[idx]}")
       if self.objects[idx] is not None:
         for other in self.objects[idx]:
           if intersects(bbox, other):

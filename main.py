@@ -20,7 +20,6 @@ def parse():
     try:
         with pdfplumber.open(bottle.request.body) as pdf:
             bottle.response.content_type = 'text/html'
-            bottle.response.headers['Access-Control-Allow-Origin'] = '*'
             return utils.to_markdown(pdf)
     except Exception as e:
         bottle.response.status = 400
