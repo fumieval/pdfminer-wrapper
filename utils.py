@@ -66,7 +66,11 @@ def page_to_markdown(page):
 
   yield buffer.flush()
 
-def to_markdown(pdf: pdfplumber.pdf):
+def to_markdown_stream(pdf: pdfplumber.pdf):
   for page in pdf.pages:
     for line in page_to_markdown(page):
       yield line
+
+def file_to_markdown(file):
+  with pdfplumber.open(file) as pdf:
+    return "".join(to_markdown_stream(pdf))
