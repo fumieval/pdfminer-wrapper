@@ -20,7 +20,7 @@ def parse():
     try:
         with pdfplumber.open(bottle.request.body) as pdf:
             bottle.response.content_type = 'text/html'
-            return utils.to_markdown(pdf)
+            return utils.to_markdown_stream(pdf)
     except Exception as e:
         bottle.response.status = 400
         return str(e)
